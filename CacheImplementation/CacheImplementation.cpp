@@ -14,16 +14,16 @@ struct Node {
 	int value;
 	int key;
 	Node(Node* p, Node* n, int k, int val) :prev(p), next(n), key(k), value(val) {};
-	Node(int k, int val) :prev(NULL), next(NULL), key(k), value(val) {};
+	Node(int k, int val) :prev(nullptr), next(nullptr), key(k), value(val) {};
 };
 
 class Cache {
 
 protected:
-	map<int, Node*> mp; //map the key to the node in the linked list
-	int cp;  //capacity
-	Node* tail; // double linked list tail pointer
-	Node* head; // double linked list head pointer
+	map<int, unique_ptr<Node>> mp; //map the key to the node in the linked list
+	Node* tail = nullptr; // double linked list tail pointer
+	Node* head = nullptr; // double linked list head pointer
+	int cp = 0;  //capacity
 	virtual void set(int, int) = 0; //set function
 	virtual int get(int) = 0; //get function
 };
@@ -33,7 +33,7 @@ class LRUCache : protected Cache {
 		if (head == nullptr) throw exception("Head not set up when it should.");
 		if (tail == nullptr) throw exception("Tail not set up when it should.");
 
-		Node* containingNode = mp[key];
+		Node* containingNode = mp[key].get();
 		if (containingNode != head) {
 			if (containingNode->prev == nullptr) throw exception("The previous node for the existing node is null when it's not the head of the linked list.");
 
@@ -57,35 +57,32 @@ class LRUCache : protected Cache {
 	}
 
 	void initializeMap(int key, int value) {
-		Node* newNode = new Node(key, value);
+		auto newNode = make_unique<Node>(Node(key, value));
 
-		mp[key] = newNode;
+		mp.insert(make_pair(key, move(newNode)));
 
-		head = newNode;
-		tail = newNode;
+		head = newNode.get();
+		tail = newNode.get();
 	}
 
 	void addNode(int key, int value) {
-		Node* newNode = new Node(nullptr, head, key, value);
+		auto newNode = make_unique<Node>(Node(nullptr, head, key, value));
 		if (head == nullptr) throw exception("Head not set up when it should.");
 		if (tail == nullptr) throw exception("Tail not set up when it should.");
 
 		if (mp.size() == cp) {
 			mp.erase(tail->key);
-			Node* temp = tail;
+			auto temp = tail;
 			tail = temp->prev;
-			delete temp;
 		}
 
-		head->prev = newNode;
-		mp[key] = newNode;
-		head = newNode;
+		head->prev = newNode.get();
+		mp.insert(make_pair(key, move(newNode)));
+		head = newNode.get();
 	}
 
 public:
 	LRUCache(int capacity) {
-		tail = nullptr;
-		head = nullptr;
 		cp = capacity;
 	}
 
@@ -120,7 +117,7 @@ public:
 	}
 
 	~LRUCache() {
-		
+		mp.clear();
 	}
 };
 
